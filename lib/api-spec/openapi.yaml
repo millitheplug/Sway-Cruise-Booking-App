@@ -3,13 +3,17 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Sway cruise booking and operations API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: cruises
+    description: Customer cruise discovery and booking
+  - name: operations
+    description: Sway operations dashboard
 paths:
   /healthz:
     get:
@@ -24,6 +28,192 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /cruises:
+    get:
+      operationId: listCruises
+      tags: [cruises]
+      summary: List bookable cruise experiences
+      responses:
+        "200":
+          description: Available cruise experiences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Cruise"
+  /bookings:
+    post:
+      operationId: createBooking
+      tags: [cruises]
+      summary: Request a cruise booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Booking request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "400":
+          description: Invalid booking details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /admin/overview:
+    get:
+      operationId: getAdminOverview
+      tags: [operations]
+      summary: Get operational KPIs, chart data, and priority alerts
+      responses:
+        "200":
+          description: Operations overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverview"
+  /admin/fleet:
+    get:
+      operationId: listFleet
+      tags: [operations]
+      summary: List vessels and their live operating condition
+      responses:
+        "200":
+          description: Fleet vessels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vessel"
+  /admin/fleet/{vesselId}:
+    patch:
+      operationId: updateVessel
+      tags: [operations]
+      summary: Update vessel availability or service schedule
+      parameters:
+        - name: vesselId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VesselUpdate"
+      responses:
+        "200":
+          description: Updated vessel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vessel"
+        "404":
+          description: Vessel not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /admin/bookings:
+    get:
+      operationId: listAdminBookings
+      tags: [operations]
+      summary: List and filter booking requests
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [requested, confirmed, in_progress, completed, cancelled]
+      responses:
+        "200":
+          description: Booking records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminBooking"
+  /admin/bookings/{bookingId}:
+    patch:
+      operationId: updateBooking
+      tags: [operations]
+      summary: Approve, cancel, extend, or assign a booking
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingUpdate"
+      responses:
+        "200":
+          description: Updated booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminBooking"
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /admin/revenue:
+    get:
+      operationId: getRevenue
+      tags: [operations]
+      summary: Get revenue trends and payment breakdown
+      responses:
+        "200":
+          description: Revenue analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueReport"
+  /admin/monitoring:
+    get:
+      operationId: getMonitoring
+      tags: [operations]
+      summary: Get fleet health, service alerts, and operational systems status
+      responses:
+        "200":
+          description: Monitoring snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonitoringReport"
+  /admin/activity:
+    get:
+      operationId: listActivity
+      tags: [operations]
+      summary: Get recent operational events
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +223,195 @@ components:
           type: string
       required:
         - status
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    Cruise:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        tagline: { type: string }
+        route: { type: string }
+        durationHours: { type: number }
+        capacity: { type: integer }
+        pricePerPerson: { type: number }
+        rating: { type: number }
+        imageUrl: { type: string }
+        departure: { type: string }
+        highlights:
+          type: array
+          items: { type: string }
+      required: [id, name, tagline, route, durationHours, capacity, pricePerPerson, rating, imageUrl, departure, highlights]
+    BookingInput:
+      type: object
+      properties:
+        cruiseId: { type: integer }
+        guestName: { type: string, minLength: 2 }
+        guestEmail: { type: string, format: email }
+        guestPhone: { type: string }
+        departureDate: { type: string, format: date }
+        passengers: { type: integer, minimum: 1, maximum: 12 }
+        notes: { type: string }
+      required: [cruiseId, guestName, guestEmail, departureDate, passengers]
+    Booking:
+      type: object
+      properties:
+        id: { type: integer }
+        reference: { type: string }
+        cruiseId: { type: integer }
+        cruiseName: { type: string }
+        guestName: { type: string }
+        guestEmail: { type: string }
+        guestPhone: { type: ["string", "null"] }
+        departureDate: { type: string, format: date }
+        passengers: { type: integer }
+        total: { type: number }
+        status: { type: string }
+        paymentStatus: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, reference, cruiseId, cruiseName, guestName, guestEmail, departureDate, passengers, total, status, paymentStatus, createdAt]
+    AdminBooking:
+      allOf:
+        - $ref: "#/components/schemas/Booking"
+        - type: object
+          properties:
+            vesselId: { type: ["integer", "null"] }
+            vesselName: { type: ["string", "null"] }
+            paymentMethod: { type: string }
+            departureTime: { type: string }
+          required: [paymentMethod, departureTime]
+    BookingUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [requested, confirmed, in_progress, completed, cancelled]
+        vesselId:
+          type: ["integer", "null"]
+        departureDate:
+          type: string
+          format: date
+        paymentStatus:
+          type: string
+          enum: [unpaid, paid, overdue, refunded]
+    Vessel:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        model: { type: string }
+        registration: { type: string }
+        capacity: { type: integer }
+        status:
+          type: string
+          enum: [available, on_cruise, maintenance, attention]
+        location: { type: string }
+        mileage: { type: integer }
+        lastService: { type: string, format: date }
+        nextService: { type: string, format: date }
+        fuelPercent: { type: integer }
+        imageUrl: { type: string }
+      required: [id, name, model, registration, capacity, status, location, mileage, lastService, nextService, fuelPercent, imageUrl]
+    VesselUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [available, on_cruise, maintenance, attention]
+        nextService:
+          type: string
+          format: date
+    AdminOverview:
+      type: object
+      properties:
+        totalBookings: { type: integer }
+        activeVessels: { type: integer }
+        revenue: { type: number }
+        pendingRequests: { type: integer }
+        occupancyPercent: { type: integer }
+        revenueTrend:
+          type: array
+          items: { $ref: "#/components/schemas/TrendPoint" }
+        bookingTrend:
+          type: array
+          items: { $ref: "#/components/schemas/TrendPoint" }
+        alerts:
+          type: array
+          items: { $ref: "#/components/schemas/OperationalAlert" }
+      required: [totalBookings, activeVessels, revenue, pendingRequests, occupancyPercent, revenueTrend, bookingTrend, alerts]
+    TrendPoint:
+      type: object
+      properties:
+        label: { type: string }
+        value: { type: number }
+      required: [label, value]
+    OperationalAlert:
+      type: object
+      properties:
+        id: { type: integer }
+        severity: { type: string, enum: [critical, warning, info] }
+        category: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        vesselName: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+        resolved: { type: boolean }
+      required: [id, severity, category, title, detail, createdAt, resolved]
+    RevenueReport:
+      type: object
+      properties:
+        grossRevenue: { type: number }
+        collectedRevenue: { type: number }
+        outstanding: { type: number }
+        monthly:
+          type: array
+          items: { $ref: "#/components/schemas/TrendPoint" }
+        paymentMethods:
+          type: array
+          items: { $ref: "#/components/schemas/PaymentBreakdown" }
+      required: [grossRevenue, collectedRevenue, outstanding, monthly, paymentMethods]
+    PaymentBreakdown:
+      type: object
+      properties:
+        method: { type: string }
+        count: { type: integer }
+        amount: { type: number }
+      required: [method, count, amount]
+    MonitoringReport:
+      type: object
+      properties:
+        generatedAt: { type: string, format: date-time }
+        fleetAvailability: { type: integer }
+        openAlerts: { type: integer }
+        overdueReturns: { type: integer }
+        maintenanceDue: { type: integer }
+        paymentIssues: { type: integer }
+        services:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceHealth" }
+        alerts:
+          type: array
+          items: { $ref: "#/components/schemas/OperationalAlert" }
+      required: [generatedAt, fleetAvailability, openAlerts, overdueReturns, maintenanceDue, paymentIssues, services, alerts]
+    ServiceHealth:
+      type: object
+      properties:
+        name: { type: string }
+        status: { type: string, enum: [operational, degraded, outage] }
+        latencyMs: { type: integer }
+        checkedAt: { type: string, format: date-time }
+      required: [name, status, latencyMs, checkedAt]
+    ActivityEvent:
+      type: object
+      properties:
+        id: { type: integer }
+        kind: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, kind, title, detail, createdAt]
 

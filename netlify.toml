@@ -1,0 +1,11 @@
+[build]
+  command = "pnpm --filter @workspace/sway-cruises... run build"
+  publish = "artifacts/sway-cruises/dist/public"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# Set VITE_API_BASE_URL in the Netlify dashboard (Site settings > Environment
+# variables) to your deployed backend's public URL, e.g.
+# https://sway-cruise-api.onrender.com
+# so the frontend calls the live API instead of a relative /api path.

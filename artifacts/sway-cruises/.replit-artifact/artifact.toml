@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Sway Cruises"
+description = "A customer cruise discovery and booking experience paired with a separate operations dashboard at /admin for managing fleet, reservations, revenue, payments, and live operational alerts."
+version = "1.0.0"
+id = "artifacts/sway-cruises"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22269
+
+[services.development]
+run = "pnpm --filter @workspace/sway-cruises run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sway-cruises", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sway-cruises/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22269"
+BASE_PATH = "/"

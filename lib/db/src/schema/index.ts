@@ -1,4 +1,7 @@
-// Export your models here. Add one export per file
+export * from "./bookings";
+export * from "./cruises";
+export * from "./operations";
+export * from "./vessels";
 // export * from "./posts";
 //
 // Each model/table should ideally be split into different files.
